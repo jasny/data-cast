@@ -1,6 +1,6 @@
 {
     "name": "jasny/meta-cast",
-    "description": "Jasny skeleton library",
+    "description": "Cast values based on meta data",
     "license": "MIT",
     "type": "library",
     "authors": [
