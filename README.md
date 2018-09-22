@@ -37,4 +37,4 @@ The following dependencies are used:
 
 * `Jasny\Meta\Factory` - factory for fetching meta data from class definition ([Jasny Meta](https://github.com/jasny/meta))
 * `Jasny\TypeCast` - for casting various types of data ([Jasny TypeCast](https://github.com/jasny/typecast))
-*
+
