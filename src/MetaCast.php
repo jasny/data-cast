@@ -79,7 +79,7 @@ class MetaCast
         $properties = $meta->getProperties();
 
         foreach ($properties as $name => $item) {
-            $toType = $item->get('var');
+            $toType = $item->get('type');
             if (!$toType || !isset($data->$name)) {
                 continue;
             }

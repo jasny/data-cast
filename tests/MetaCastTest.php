@@ -106,11 +106,11 @@ class MetaCastTest extends TestCase
         $property4 = $this->createMock(MetaProperty::class);
         $property5 = $this->createMock(MetaProperty::class);
 
-        $property1->expects($this->once())->method('get')->with('var')->willReturn('type1');
-        $property2->expects($this->once())->method('get')->with('var')->willReturn(null);
-        $property3->expects($this->once())->method('get')->with('var')->willReturn('type2');
-        $property4->expects($this->once())->method('get')->with('var')->willReturn('type3');
-        $property5->expects($this->once())->method('get')->with('var')->willReturn(null);
+        $property1->expects($this->once())->method('get')->with('type')->willReturn('type1');
+        $property2->expects($this->once())->method('get')->with('type')->willReturn(null);
+        $property3->expects($this->once())->method('get')->with('type')->willReturn('type2');
+        $property4->expects($this->once())->method('get')->with('type')->willReturn('type3');
+        $property5->expects($this->once())->method('get')->with('type')->willReturn(null);
 
         $properties = [
             'foo' => $property1,
