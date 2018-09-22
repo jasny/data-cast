@@ -15,7 +15,9 @@
         "source": "https://github.com/jasny/meta-cast"
     },
     "require": {
-        "php": ">=7.1.0"
+        "php": ">=7.1.0",
+        "jasny/meta": "dev-master",
+        "jasny/typecast": "dev-master"
     },
     "require-dev": {
         "jasny/php-code-quality": "^2.3"
@@ -34,7 +36,7 @@
         "test": [
             "phpunit",
             "phpcs -p src",
-            "phpstan analyse"
+            "phpstan analyse src"
         ],
         "post-create-project-cmd": [
             "bash init.sh && rm init.sh"
