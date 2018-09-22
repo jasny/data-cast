@@ -14,3 +14,27 @@ Installation
 
     composer require jasny/meta-cast
 
+Usage
+---
+
+Here's an example of casting data to class:
+
+```php
+use Jasny\Meta\Factory as MetaFactory;
+use Jasny\TypeCast;
+use Jasny\MetaCast\MetaCast;
+
+$factory = new MetaFactory(...);
+$typecast = new TypeCast();
+
+$caster = new MetaCast($factory, $typecast);
+
+// Elsewhere in the code
+$data = $caster->cast(User::class, $input);
+```
+
+The following dependencies are used:
+
+* `Jasny\Meta\Factory` - factory for fetching meta data from class definition ([Jasny Meta](https://github.com/jasny/meta))
+* `Jasny\TypeCast` - for casting various types of data ([Jasny TypeCast](https://github.com/jasny/typecast))
+*
