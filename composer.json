@@ -1,5 +1,5 @@
 {
-    "name": "jasny/meta-cast",
+    "name": "jasny/recursive-typecast",
     "description": "Cast values based on meta data",
     "license": "MIT",
     "type": "library",
@@ -11,8 +11,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/jasny/meta-cast/issues",
-        "source": "https://github.com/jasny/meta-cast"
+        "issues": "https://github.com/jasny/recursive-typecast/issues",
+        "source": "https://github.com/jasny/recursive-typecast"
     },
     "require": {
         "php": ">=7.1.0",
@@ -24,12 +24,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Jasny\\MetaCast\\": "src/"
+            "Jasny\\RecursiveTypeCast\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Jasny\\MetaCast\\Tests\\": "tests/"
+            "Jasny\\RecursiveTypeCast\\Tests\\": "tests/"
         }
     },
     "scripts": {
