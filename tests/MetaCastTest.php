@@ -47,11 +47,40 @@ class MetaCastTest extends TestCase
      */
     public function testCastPrimitive($data, $type)
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("Can not cast '$type' to 'Foo': expected object or array");
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage("Expected array or object, $type given");
 
         $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
         $result = $metaCast->cast('Foo', $data);
+    }
+
+    /**
+     * Provide data for testing 'cast' method, if $class parameter is of wrong type
+     *
+     * @return array
+     */
+    public function castClassWrongTypeProvider()
+    {
+        return [
+            [12, 'integer'],
+            [true, 'boolean'],
+            [[], 'array'],
+            [null, 'NULL'],
+        ];
+    }
+
+    /**
+     * Test 'cast' method, if $class parameter is of wrong type
+     *
+     * @dataProvider castClassWrongTypeProvider
+     */
+    public function testCastClassWrongType($class, $type)
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage("Expected string or object, $type given");
+
+        $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
+        $result = $metaCast->cast($class, []);
     }
 
     /**
@@ -83,9 +112,16 @@ class MetaCastTest extends TestCase
             'baz' => 'value3'
         ];
 
+        $expected = [
+            'foo' => 'casted_value1',
+            'bar' => 'value2',
+            'baz' => 'casted_value3'
+        ];
+
         return [
-            [$data],
-            [(object)$data],
+            ['Foo', 'Foo', $data, $expected],
+            ['Foo', 'Foo', (object)$data, (object)$expected],
+            [new \stdClass(), \stdClass::class, $data, $expected],
         ];
     }
 
@@ -94,9 +130,8 @@ class MetaCastTest extends TestCase
      *
      * @dataProvider castProvider
      */
-    public function testCast($data)
+    public function testCast($classParam, $class, $data, $expected)
     {
-        $class = 'Foo';
         $meta = $this->createMock(MetaClass::class);
         $castHandler = $this->createMock(HandlerInterface::class);
 
@@ -120,27 +155,19 @@ class MetaCastTest extends TestCase
             'pir' => $property5
         ];
 
-        $castedProperties = (object)[
-            'foo' => 'casted_value1',
-            'bar' => 'value2',
-            'baz' => 'casted_value3'
-        ];
-
-        $expected = (object)$castedProperties;
-
         $this->metaFactory->expects($this->once())->method('forClass')->with($class)->willReturn($meta);
         $meta->expects($this->once())->method('getProperties')->willReturn($properties);
 
-        $this->typeCast->expects($this->exactly(3))->method('to')
-            ->withConsecutive(['type1'], ['type3'], [$class])
-            ->willReturnOnConsecutiveCalls($castHandler, $castHandler, $castHandler);
+        $this->typeCast->expects($this->exactly(2))->method('to')
+            ->withConsecutive(['type1'], ['type3'])
+            ->willReturnOnConsecutiveCalls($castHandler, $castHandler);
 
-        $castHandler->expects($this->exactly(3))->method('cast')
-            ->withConsecutive(['value1'], ['value3'], [$castedProperties])
-            ->willReturnOnConsecutiveCalls('casted_value1', 'casted_value3', $expected);
+        $castHandler->expects($this->exactly(2))->method('cast')
+            ->withConsecutive(['value1'], ['value3'])
+            ->willReturnOnConsecutiveCalls('casted_value1', 'casted_value3');
 
         $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
-        $result = $metaCast->cast('Foo', $data);
+        $result = $metaCast->cast($classParam, $data);
 
         $this->assertEquals($expected, $result);
     }
@@ -155,16 +182,29 @@ class MetaCastTest extends TestCase
         $meta = $this->createMock(MetaClass::class);
         $castHandler = $this->createMock(HandlerInterface::class);
 
-        $expected = (object)$data;
+        $expected = $data;
 
         $this->metaFactory->expects($this->once())->method('forClass')->with($class)->willReturn($meta);
         $meta->expects($this->once())->method('getProperties')->willReturn([]);
-        $this->typeCast->expects($this->once())->method('to')->with($class)->willReturn($castHandler);
-        $castHandler->expects($this->once())->method('cast')->with((object)$data)->willReturn($expected);
 
         $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
         $result = $metaCast->cast('Foo', $data);
 
         $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test '__invoke' method
+     */
+    public function testInvoke()
+    {
+        $class = 'Foo';
+        $data = [];
+        $expected = (object)[];
+
+        $metaCast = $this->createMock(MetaCast::class);
+        $metaCast->expects($this->once())->method('cast')->with($class, $data)->willReturn($expected);
+
+        $result = $metaCast($class, $data);
     }
 }
