@@ -8,6 +8,7 @@ use Jasny\Meta\FactoryInterface;
 use Jasny\Meta\MetaClass;
 use Jasny\TypeCastInterface;
 use \InvalidArgumentException;
+use function Jasny\expect_type;
 
 /**
  * Cast data to class
@@ -39,17 +40,31 @@ class MetaCast
     }
 
     /**
-     * Cast data to given class
+     * Use object as callable
      *
-     * @param string $class
+     * @param string|object $class
      * @param array|object $data
      * @return object
      */
-    public function cast(string $class, $data)
+    final public function __invoke($class, $data)
     {
-        if (!is_array($data) && !is_object($data)) {
-            $type = gettype($data);
-            throw new InvalidArgumentException("Can not cast '$type' to '$class': expected object or array");
+        return $this->cast($class, $data);
+    }
+
+    /**
+     * Cast data to given class
+     *
+     * @param string|object $class
+     * @param array|object $data
+     * @return object
+     */
+    public function cast($class, $data)
+    {
+        expect_type($class, ['string', 'object']);
+        expect_type($data, ['array', 'object']);
+
+        if (is_object($class)) {
+            $class = get_class($class);
         }
 
         if (is_a($data, $class)) {
