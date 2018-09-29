@@ -167,4 +167,19 @@ class MetaCastTest extends TestCase
 
         $this->assertEquals($expected, $result);
     }
+
+    /**
+     * Test '__invoke' method
+     */
+    public function testInvoke()
+    {
+        $class = 'Foo';
+        $data = [];
+        $expected = (object)[];
+
+        $metaCast = $this->createMock(MetaCast::class);
+        $metaCast->expects($this->once())->method('cast')->with($class, $data)->willReturn($expected);
+
+        $result = $metaCast($class, $data);
+    }
 }
