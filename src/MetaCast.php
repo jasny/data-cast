@@ -39,6 +39,18 @@ class MetaCast
     }
 
     /**
+     * Use object as callable
+     *
+     * @param string $class
+     * @param array|object $data
+     * @return object
+     */
+    final public function __invoke(string $class, $data)
+    {
+        return $this->cast($class, $data);
+    }
+
+    /**
      * Cast data to given class
      *
      * @param string $class
