@@ -52,10 +52,6 @@ class MetaCast
             throw new InvalidArgumentException("Can not cast '$type' to '$class': expected object or array");
         }
 
-        if (is_array($data)) {
-            $data = (object)$data;
-        }
-
         if (is_a($data, $class)) {
             return clone $data;
         }
@@ -63,7 +59,7 @@ class MetaCast
         $meta = $this->metaFactory->forClass($class);
         $data = $this->castProperties($meta, $data);
 
-        return $this->typeCast->to($class)->cast($data);
+        return $data;
     }
 
     /**
@@ -75,18 +71,22 @@ class MetaCast
      */
     protected function castProperties(MetaClass $meta, $data)
     {
+        $isArray = is_array($data);
+        if ($isArray) {
+            $data = (object)$data;
+        }
+
         $data = clone $data;
         $properties = $meta->getProperties();
 
         foreach ($properties as $name => $item) {
             $toType = $item->get('type');
-            if (!$toType || !isset($data->$name)) {
-                continue;
-            }
 
-            $data->$name = $this->typeCast->to($toType)->cast($data->$name);
+            if ($toType && isset($data->$name)) {
+                $data->$name = $this->typeCast->to($toType)->cast($data->$name);
+            }
         }
 
-        return $data;
+        return $isArray ? (array)$data : $data;
     }
 }
