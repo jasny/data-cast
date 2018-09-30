@@ -11,7 +11,7 @@ use \InvalidArgumentException;
 use function Jasny\expect_type;
 
 /**
- * Cast data to class
+ * Cast data to class using class metadata
  */
 class MetaCast
 {
@@ -44,7 +44,7 @@ class MetaCast
      *
      * @param string|object $class
      * @param array|object $data
-     * @return object
+     * @return array|object
      */
     final public function __invoke($class, $data)
     {
@@ -56,7 +56,7 @@ class MetaCast
      *
      * @param string|object $class
      * @param array|object $data
-     * @return object
+     * @return array|object
      */
     public function cast($class, $data)
     {
@@ -72,36 +72,44 @@ class MetaCast
         }
 
         $meta = $this->metaFactory->forClass($class);
-        $data = $this->castProperties($meta, $data);
+        $handlers = $this->getHandlers($meta, $data);
+        $caster = $this->getDataCaster($handlers);
 
-        return $data;
+        return $caster->cast($data);
     }
 
     /**
-     * Cast class properties
+     * Get cast handlers
      *
      * @param MetaClass $meta
      * @param object $data
-     * @return object
+     * @return array
      */
-    protected function castProperties(MetaClass $meta, $data)
+    protected function getHandlers(MetaClass $meta, $data)
     {
-        $isArray = is_array($data);
-        if ($isArray) {
-            $data = (object)$data;
-        }
-
-        $data = clone $data;
+        $handlers = [];
         $properties = $meta->getProperties();
 
         foreach ($properties as $name => $item) {
             $toType = $item->get('type');
 
-            if ($toType && isset($data->$name)) {
-                $data->$name = $this->typeCast->to($toType)->cast($data->$name);
+            if ($toType) {
+                $handlers[$name] = $this->typeCast->to($toType);
             }
         }
 
-        return $isArray ? (array)$data : $data;
+        return $handlers;
+    }
+
+    /**
+     * Get instance of data caster
+     *
+     * @codeCoverageIgnore
+     * @param array $handlers
+     * @return DataCast
+     */
+    protected function getDataCaster(array $handlers)
+    {
+        return new DataCast($handlers);
     }
 }
