@@ -7,6 +7,7 @@ namespace Jasny\MetaCast;
 use Jasny\Meta\FactoryInterface;
 use Jasny\Meta\MetaClass;
 use Jasny\TypeCastInterface;
+use Psr\SimpleCache\CacheInterface;
 use \InvalidArgumentException;
 use function Jasny\expect_type;
 
@@ -28,15 +29,22 @@ class MetaCast
     protected $typeCast;
 
     /**
+     * Cache for DataCast
+     * @var CacheInterface
+     **/
+    protected $cache;
+
+    /**
      * Create class instance
      *
      * @param FactoryInterface $metaFactory
      * @param TypeCastInterface $typeCast
      */
-    public function __construct(FactoryInterface $metaFactory, TypeCastInterface $typeCast)
+    public function __construct(FactoryInterface $metaFactory, TypeCastInterface $typeCast, CacheInterface $cache)
     {
         $this->metaFactory = $metaFactory;
         $this->typeCast = $typeCast;
+        $this->cache = $cache;
     }
 
     /**
@@ -71,9 +79,16 @@ class MetaCast
             return clone $data;
         }
 
-        $meta = $this->metaFactory->forClass($class);
-        $handlers = $this->getHandlers($meta, $data);
-        $caster = $this->getDataCaster($handlers);
+        $cacheName = 'DataCastForClass:' . $class;
+        $caster = $this->cache->get($cacheName);
+
+        if (!$caster instanceof DataCast) {
+            $meta = $this->metaFactory->forClass($class);
+            $handlers = $this->getHandlers($meta, $data);
+            $caster = $this->getDataCaster($handlers);
+
+            $this->cache->set($cacheName, $caster);
+        }
 
         return $caster->cast($data);
     }

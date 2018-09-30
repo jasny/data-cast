@@ -9,6 +9,7 @@ use Jasny\MetaCast\MetaCast;
 use Jasny\MetaCast\DataCast;
 use Jasny\TypeCastInterface;
 use Jasny\TypeCast\HandlerInterface;
+use Psr\SimpleCache\CacheInterface;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -20,12 +21,31 @@ class MetaCastTest extends TestCase
     use \Jasny\TestHelper;
 
     /**
+     * Mock factory for fetching meta
+     * @var FactoryInterface
+     **/
+    protected $metaFactory;
+
+    /**
+     * Mock type caster
+     * @var TypeCastInterface
+     **/
+    protected $typeCast;
+
+    /**
+     * Mock cache for DataCast
+     * @var CacheInterface
+     **/
+    protected $cache;
+
+    /**
      * Set up dependencies before each test case
      */
     protected function setUp()
     {
         $this->metaFactory = $this->createMock(FactoryInterface::class);
         $this->typeCast = $this->createMock(TypeCastInterface::class);
+        $this->cache = $this->createMock(CacheInterface::class);
     }
 
     /**
@@ -53,7 +73,7 @@ class MetaCastTest extends TestCase
         $this->expectException(\TypeError::class);
         $this->expectExceptionMessage("Expected array or object, $type given");
 
-        $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
+        $metaCast = new MetaCast($this->metaFactory, $this->typeCast, $this->cache);
         $result = $metaCast->cast('Foo', $data);
     }
 
@@ -82,7 +102,7 @@ class MetaCastTest extends TestCase
         $this->expectException(\TypeError::class);
         $this->expectExceptionMessage("Expected string or object, $type given");
 
-        $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
+        $metaCast = new MetaCast($this->metaFactory, $this->typeCast, $this->cache);
         $result = $metaCast->cast($class, []);
     }
 
@@ -94,7 +114,7 @@ class MetaCastTest extends TestCase
         $this->metaFactory->expects($this->never())->method('forClass');
 
         $data = (object)['foo' => 'bar'];
-        $metaCast = new MetaCast($this->metaFactory, $this->typeCast);
+        $metaCast = new MetaCast($this->metaFactory, $this->typeCast, $this->cache);
 
         $result = $metaCast->cast(stdClass::class, $data);
 
@@ -166,6 +186,9 @@ class MetaCastTest extends TestCase
             'baz' => $castHandler3
         ];
 
+        $cacheName = 'DataCastForClass:' . $class;
+
+        $this->cache->expects($this->once())->method('get')->with($cacheName)->willReturn(null);
         $this->metaFactory->expects($this->once())->method('forClass')->with($class)->willReturn($meta);
         $meta->expects($this->once())->method('getProperties')->willReturn($properties);
 
@@ -176,12 +199,39 @@ class MetaCastTest extends TestCase
         $metaCast = $this->createPartialMock(MetaCast::class, ['getDataCaster']);
         $this->setPrivateProperty($metaCast, 'metaFactory', $this->metaFactory);
         $this->setPrivateProperty($metaCast, 'typeCast', $this->typeCast);
+        $this->setPrivateProperty($metaCast, 'cache', $this->cache);
 
         $dataCast = $this->createMock(DataCast::class);
         $metaCast->expects($this->once())->method('getDataCaster')->with($handlers)->willReturn($dataCast);
+        $this->cache->expects($this->once())->method('set')->with($cacheName, $dataCast);
         $dataCast->expects($this->once())->method('cast')->with($data)->willReturn($expected);
 
         $result = $metaCast->cast($classParam, $data);
+
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Test 'cast' method, in case when DataCast is taken from cache
+     */
+    public function testCastCached()
+    {
+        $class = 'Foo';
+        $cacheName = 'DataCastForClass:' . $class;
+        $data = ['foo' => 'bar'];
+        $expected = ['foo' => 'casted_bar'];
+
+        $dataCast = $this->createMock(DataCast::class);
+        $metaCast = $this->createPartialMock(MetaCast::class, ['getDataCaster']);
+        $this->setPrivateProperty($metaCast, 'metaFactory', $this->metaFactory);
+        $this->setPrivateProperty($metaCast, 'typeCast', $this->typeCast);
+        $this->setPrivateProperty($metaCast, 'cache', $this->cache);
+
+        $this->cache->expects($this->once())->method('get')->with($cacheName)->willReturn($dataCast);
+        $this->metaFactory->expects($this->never())->method('forClass');
+        $dataCast->expects($this->once())->method('cast')->with($data)->willReturn($expected);
+
+        $result = $metaCast->cast($class, $data);
 
         $this->assertEquals($expected, $result);
     }
@@ -196,15 +246,20 @@ class MetaCastTest extends TestCase
         $meta = $this->createMock(MetaClass::class);
         $expected = $data;
 
+        $cacheName = 'DataCastForClass:' . $class;
+
+        $this->cache->expects($this->once())->method('get')->with($cacheName)->willReturn(null);
         $this->metaFactory->expects($this->once())->method('forClass')->with($class)->willReturn($meta);
         $meta->expects($this->once())->method('getProperties')->willReturn([]);
 
         $metaCast = $this->createPartialMock(MetaCast::class, ['getDataCaster']);
         $this->setPrivateProperty($metaCast, 'metaFactory', $this->metaFactory);
         $this->setPrivateProperty($metaCast, 'typeCast', $this->typeCast);
+        $this->setPrivateProperty($metaCast, 'cache', $this->cache);
 
         $dataCast = $this->createMock(DataCast::class);
         $metaCast->expects($this->once())->method('getDataCaster')->with([])->willReturn($dataCast);
+        $this->cache->expects($this->once())->method('set')->with($cacheName, $dataCast);
         $dataCast->expects($this->once())->method('cast')->with($data)->willReturn($expected);
 
         $result = $metaCast->cast('Foo', $data);
