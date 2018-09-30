@@ -7,10 +7,12 @@ namespace Jasny\MetaCast;
 use Jasny\Meta\FactoryInterface;
 use Jasny\Meta\MetaClass;
 use Jasny\TypeCastInterface;
+use Psr\SimpleCache\CacheInterface;
 use \InvalidArgumentException;
+use function Jasny\expect_type;
 
 /**
- * Cast data to class
+ * Cast data to class using class metadata
  */
 class MetaCast
 {
@@ -27,66 +29,102 @@ class MetaCast
     protected $typeCast;
 
     /**
+     * Cache for DataCast
+     * @var CacheInterface
+     **/
+    protected $cache;
+
+    /**
      * Create class instance
      *
      * @param FactoryInterface $metaFactory
      * @param TypeCastInterface $typeCast
      */
-    public function __construct(FactoryInterface $metaFactory, TypeCastInterface $typeCast)
+    public function __construct(FactoryInterface $metaFactory, TypeCastInterface $typeCast, CacheInterface $cache)
     {
         $this->metaFactory = $metaFactory;
         $this->typeCast = $typeCast;
+        $this->cache = $cache;
+    }
+
+    /**
+     * Use object as callable
+     *
+     * @param string|object $class
+     * @param array|object $data
+     * @return array|object
+     */
+    final public function __invoke($class, $data)
+    {
+        return $this->cast($class, $data);
     }
 
     /**
      * Cast data to given class
      *
-     * @param string $class
+     * @param string|object $class
      * @param array|object $data
-     * @return object
+     * @return array|object
      */
-    public function cast(string $class, $data)
+    public function cast($class, $data)
     {
-        if (!is_array($data) && !is_object($data)) {
-            $type = gettype($data);
-            throw new InvalidArgumentException("Can not cast '$type' to '$class': expected object or array");
-        }
+        expect_type($class, ['string', 'object']);
+        expect_type($data, ['array', 'object']);
 
-        if (is_array($data)) {
-            $data = (object)$data;
+        if (is_object($class)) {
+            $class = get_class($class);
         }
 
         if (is_a($data, $class)) {
             return clone $data;
         }
 
-        $meta = $this->metaFactory->forClass($class);
-        $data = $this->castProperties($meta, $data);
+        $cacheName = 'DataCastForClass:' . $class;
+        $caster = $this->cache->get($cacheName);
 
-        return $this->typeCast->to($class)->cast($data);
+        if (!$caster instanceof DataCast) {
+            $meta = $this->metaFactory->forClass($class);
+            $handlers = $this->getHandlers($meta, $data);
+            $caster = $this->getDataCaster($handlers);
+
+            $this->cache->set($cacheName, $caster);
+        }
+
+        return $caster->cast($data);
     }
 
     /**
-     * Cast class properties
+     * Get cast handlers
      *
      * @param MetaClass $meta
      * @param object $data
-     * @return object
+     * @return array
      */
-    protected function castProperties(MetaClass $meta, $data)
+    protected function getHandlers(MetaClass $meta, $data)
     {
-        $data = clone $data;
+        $handlers = [];
         $properties = $meta->getProperties();
 
         foreach ($properties as $name => $item) {
             $toType = $item->get('type');
-            if (!$toType || !isset($data->$name)) {
-                continue;
-            }
 
-            $data->$name = $this->typeCast->to($toType)->cast($data->$name);
+            if ($toType) {
+                $handlers[$name] = $this->typeCast->to($toType);
+            }
         }
 
-        return $data;
+        return $handlers;
+    }
+
+    /**
+     * Get instance of data caster
+     *
+     * @codeCoverageIgnore
+     * @param array $handlers
+     * @return DataCast
+     */
+    protected function getDataCaster(array $handlers)
+    {
+        return new DataCast($handlers);
     }
 }
