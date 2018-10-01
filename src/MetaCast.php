@@ -82,10 +82,10 @@ class MetaCast
      * Get cast handlers
      *
      * @param MetaClass $meta
-     * @param object $data
+     * @param array|object $data
      * @return array
      */
-    protected function getHandlers(MetaClass $meta, $data)
+    protected function getHandlers(MetaClass $meta, $data): array
     {
         $handlers = [];
         $properties = $meta->getProperties();
@@ -108,7 +108,7 @@ class MetaCast
      * @param array $handlers
      * @return DataCast
      */
-    protected function getDataCaster(array $handlers)
+    protected function getDataCaster(array $handlers): DataCast
     {
         return new DataCast($handlers);
     }
